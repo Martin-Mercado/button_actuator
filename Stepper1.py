@@ -6,7 +6,7 @@ from utime import ticks_diff
 from rp2 import PIO, StateMachine, asm_pio
 from time import sleep
 import sys
-
+import _thread
 
 
 @asm_pio(set_init=(PIO.OUT_LOW,) * 4)
@@ -51,9 +51,8 @@ sm = StateMachine(0, prog, freq=100000, set_base=Pin(2))
 
 sm.exec("set(pins,0)")
 
-
-
-
+RedLed = Pin(28, Pin.OUT)
+GreenLed = Pin(15,Pin.OUT)
 
 class IR_RX():
     # Result/error codes
@@ -152,19 +151,41 @@ class NEC_ABC(IR_RX):
         # Set up for new data burst and run user callback
         self.do_callback(cmd, addr, 0, self.REPEAT)
 
-class NEC_8(NEC_ABC):
-    def __init__(self, pin, callback, *args):
-        super().__init__(pin, False, callback, *args)
-
 class NEC_16(NEC_ABC):
     def __init__(self, pin, callback, *args):
         super().__init__(pin, True, callback, *args)
 
 
-def callback(data, addr, ctrl):
-    if data > 0:
+def blinkLed(led):
+    led.toggle()
+    sleep(0.05)
+    led.toggle()
+
+stepperActive = False
+
+def halfSpinStepper():
+        GreenLed.toggle()
+        global stepperActive
+        stepperActive = True
         sm.active(1)
         sleep(2.3)
         sm.active(0)
+        stepperActive = False
+        GreenLed.toggle()
+
+
+def callback(data, addr, ctrl):
+    global stepperActive
+    
+    if data > 0:
+        if not stepperActive:
+            _thread.start_new_thread(halfSpinStepper,())
+        blinkLed(RedLed)
+        
+
         
 ir = NEC_16(Pin(0,Pin.IN), callback)
+
+
+    
+
