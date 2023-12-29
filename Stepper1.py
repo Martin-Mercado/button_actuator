@@ -161,16 +161,13 @@ def blinkLed(led):
     sleep(0.05)
     led.toggle()
 
-stepperActive = False
+
 
 def halfSpinStepper():
         GreenLed.toggle()
-        global stepperActive
-        stepperActive = True
         sm.active(1)
         sleep(2.3)
         sm.active(0)
-        stepperActive = False
         GreenLed.toggle()
 
 
@@ -178,8 +175,7 @@ def callback(data, addr, ctrl):
     global stepperActive
     
     if data > 0:
-        if not stepperActive:
-            _thread.start_new_thread(halfSpinStepper,())
+        halfSpinStepper()
         blinkLed(RedLed)
         
 
@@ -188,4 +184,5 @@ ir = NEC_16(Pin(0,Pin.IN), callback)
 
 
     
+
 
