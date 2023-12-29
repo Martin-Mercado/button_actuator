@@ -175,8 +175,9 @@ def callback(data, addr, ctrl):
     global stepperActive
     
     if data > 0:
-        halfSpinStepper()
         blinkLed(RedLed)
+        halfSpinStepper()
+        
         
 
         
