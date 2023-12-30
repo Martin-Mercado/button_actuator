@@ -1,59 +1,8 @@
+from array import array
 from machine import Pin
 from machine import Timer
-from array import array
 from utime import ticks_us
 from utime import ticks_diff
-from rp2 import PIO, StateMachine, asm_pio
-from time import sleep
-import sys
-import _thread
-
-
-@asm_pio(set_init=(PIO.OUT_LOW,) * 4)
-def prog():
-    wrap_target()
-    set(pins, 8) [31] # 8
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    
-    set(pins, 4) [31] # 4
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    
-    set(pins, 2) [31] # 2
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    
-    set(pins, 1) [31] # 1
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    nop() [31]
-    wrap()
-    
-
-sm = StateMachine(0, prog, freq=100000, set_base=Pin(2))
-#4.6 seconds is a whole spin
-
-sm.exec("set(pins,0)")
-
-RedLed = Pin(28, Pin.OUT)
-GreenLed = Pin(15,Pin.OUT)
-
 class IR_RX():
     # Result/error codes
     # Repeat button code
@@ -121,7 +70,7 @@ class NEC_ABC(IR_RX):
             if width < 4000:  # 9ms leading mark for all valid data
                 raise RuntimeError(self.BADSTART)
             width = ticks_diff(self._times[2], self._times[1])
-            if width > 3000:  # 4.5ms space for normal data
+            if width > 100:  # 4.5ms space for normal data
                 if self.edge < 68:  # Haven't received the correct number of edges
                     raise RuntimeError(self.BADBLOCK)
                 # Time spaces only (marks are always 562.5µs)
@@ -132,8 +81,8 @@ class NEC_ABC(IR_RX):
                     val >>= 1
                     if ticks_diff(self._times[edge + 1], self._times[edge]) > 1120:
                         val |= 0x80000000
-            elif width > 1700: # 2.5ms space for a repeat code. Should have exactly 4 edges.
-                raise RuntimeError(self.REPEAT if self.edge == 4 else self.BADREP)  # Treat REPEAT as error.
+#             elif width > 1700: # 2.5ms space for a repeat code. Should have exactly 4 edges.
+#                 raise RuntimeError(self.REPEAT if self.edge == 4 else self.BADREP)  # Treat REPEAT as error.
             else:
                 raise RuntimeError(self.BADSTART)
             addr = val & 0xff  # 8 bit addr
@@ -154,36 +103,4 @@ class NEC_ABC(IR_RX):
 class NEC_16(NEC_ABC):
     def __init__(self, pin, callback, *args):
         super().__init__(pin, True, callback, *args)
-
-
-def blinkLed(led):
-    led.toggle()
-    sleep(0.05)
-    led.toggle()
-
-
-
-def halfSpinStepper():
-        GreenLed.toggle()
-        sm.active(1)
-        sleep(2.3)
-        sm.active(0)
-        GreenLed.toggle()
-
-
-def callback(data, addr, ctrl):
-    global stepperActive
-    
-    if data > 0:
-        blinkLed(RedLed)
-        halfSpinStepper()
-        
-        
-
-        
-ir = NEC_16(Pin(0,Pin.IN), callback)
-
-
-    
-
 
